@@ -17,6 +17,7 @@ async function run() {
     const reactions: string = core.getInput('reactions');
     const mode: string = core.getInput('mode');
     const createIfNotExists: boolean = core.getInput('create-if-not-exists') === 'true';
+    const titlePath: string = core.getInput('title-path');
 
     if (!message && !filePath && mode !== 'delete') {
       core.setFailed('Either "file-path" or "message" should be provided as input unless running as "delete".');
@@ -36,6 +37,50 @@ async function run() {
     if (!issueNumber) {
       core.setFailed('No issue/pull request in input neither in current context.');
       return;
+    }
+
+    async function updateTitle({
+      owner,
+      repo,
+      issueNumber,
+      newTitle,
+    }: {
+      owner: string;
+      repo: string;
+      issueNumber: number;
+      newTitle: string;
+    }) {
+      const { data: comment } = await octokit.rest.pulls.update({
+        owner,
+        repo,
+        pull_number: issueNumber,
+        newTitle,
+      });
+
+      return comment;
+    }
+
+    if (titlePath) {
+      try {
+        let raw = fs.readFileSync(titlePath, 'utf8');
+        let title = JSON.parse(raw);
+        let oldTitle = context.payload.pull_request?.title;
+        if (!title.tag || !oldTitle.includes(title.tag)) {
+          let newTitle = title.prefix + oldTitle;
+          core.setOutput('new-title', newTitle);
+          await updateTitle({
+            ...context.repo,
+            issueNumber,
+            newTitle,
+          });
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          core.error("Unable to retitle PR:")
+          core.error(error.message);
+          // Title update is optional (for now) and validation is what matters more, so just report then proceed.
+        }
+      }
     }
 
     async function addReactions(commentId: number, reactions: string) {
@@ -108,7 +153,7 @@ async function run() {
 
       return comment;
     }
-
+    
     async function deleteComment({ owner, repo, commentId }: { owner: string; repo: string; commentId: number }) {
       const { data: comment } = await octokit.rest.issues.deleteComment({
         owner,
