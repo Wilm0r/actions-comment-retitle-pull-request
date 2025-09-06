@@ -60,7 +60,7 @@ async function run() {
       return comment;
     }
 
-    if (titlePath) {
+    if (titlePath && fs.existsSync(titlePath)) {
       try {
         let raw = fs.readFileSync(titlePath, 'utf8');
         let title = JSON.parse(raw);
