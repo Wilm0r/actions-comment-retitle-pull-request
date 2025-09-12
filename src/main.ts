@@ -54,7 +54,7 @@ async function run() {
         owner,
         repo,
         pull_number: issueNumber,
-        newTitle,
+        title: newTitle,
       });
 
       return result;
