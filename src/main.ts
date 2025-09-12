@@ -60,13 +60,15 @@ async function run() {
       return comment;
     }
 
-    if (titlePath && fs.existsSync(titlePath)) {
+    if (titlePath) { // && fs.existsSync(titlePath)) {
       try {
         let raw = fs.readFileSync(titlePath, 'utf8');
+        core.info(raw);
         let title = JSON.parse(raw);
         let oldTitle = context.payload.pull_request?.title;
         if (!title.tag || !oldTitle.includes(title.tag)) {
           let newTitle = title.prefix + oldTitle;
+          core.info("New title: " + newTitle);
           core.setOutput('new-title', newTitle);
           await updateTitle({
             ...context.repo,
